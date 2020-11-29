@@ -1,0 +1,57 @@
+#@ load("@ytt:overlay", "overlay")
+#@ load("@ytt:data", "data")
+#@ load("@ytt:yaml", "yaml")
+#@ load("/lib/helpers.star", "get_default_bom_data", "tkg_image_repo")
+
+#@ bomData = get_default_bom_data()
+
+#@ def antreaoverlay():
+
+#@overlay/match by=overlay.subset({"kind":"ConfigMap","metadata":{"name": "antrea-config-955ggkk72b"}})
+---
+kind: ConfigMap
+metadata:
+  name: antrea-config-955ggkk72b
+data:
+  antrea-agent.conf: #@ yaml.encode(antrea_agent_conf())
+
+#@overlay/match by=overlay.subset({"kind":"Deployment","metadata":{"name": "antrea-controller"}})
+---
+kind: Deployment
+metadata:
+  name: antrea-controller
+spec:
+  template:
+    spec:
+      containers:
+        #@overlay/match by=overlay.subset({"name":"antrea-controller"})
+        - image: #@ "{}/{}:{}".format(tkg_image_repo(), bomData.images.antreaImage.imagePath, bomData.images.antreaImage.tag)
+
+
+#@overlay/match by=overlay.subset({"kind":"DaemonSet","metadata":{"name": "antrea-agent"}})
+---
+kind: DaemonSet
+spec:
+  template:
+    spec:
+      containers:
+        #@overlay/match by=overlay.subset({"name":"antrea-agent"})
+        - image: #@ "{}/{}:{}".format(tkg_image_repo(), bomData.images.antreaImage.imagePath, bomData.images.antreaImage.tag)
+        #@overlay/match by=overlay.subset({"name":"antrea-ovs"})
+        - image: #@ "{}/{}:{}".format(tkg_image_repo(), bomData.images.antreaImage.imagePath, bomData.images.antreaImage.tag)
+        #@overlay/match by=overlay.subset({"name":"antrea-ipsec"})
+        - image: #@ "{}/{}:{}".format(tkg_image_repo(), bomData.images.antreaImage.imagePath, bomData.images.antreaImage.tag)
+      initContainers:
+        #@overlay/match by=overlay.subset({"name":"install-cni"})
+        - image: #@ "{}/{}:{}".format(tkg_image_repo(), bomData.images.antreaImage.imagePath, bomData.images.antreaImage.tag)
+
+#@ end
+
+
+#@ def antrea_agent_conf():
+
+#! CIDR Range for services in cluster. It's required to support egress network policy, should
+#! be set to the same value as the one specified by --service-cluster-ip-range for kube-apiserver.
+serviceCIDR: #@ data.values.SERVICE_CIDR
+
+#@ end

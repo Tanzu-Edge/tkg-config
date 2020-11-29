@@ -1,0 +1,141 @@
+#! Please add any overlays specific to vSphere provider under this file.
+#@ load("@ytt:overlay", "overlay")
+
+#! Adding your custom CA certificate to the trusted chain and PROXY conf on all Control Plane nodes.
+#@overlay/match by=overlay.subset({"kind":"KubeadmControlPlane"})
+---
+spec:
+  kubeadmConfigSpec:
+    preKubeadmCommands:
+    #! Adding your custom CA certificate
+    #@overlay/append
+    - |
+      cat <<EOF > /etc/ssl/certs/myca.pem
+      -----BEGIN CERTIFICATE-----
+      MIIFGDCCAwACCQCN5wYlscWbuTANBgkqhkiG9w0BAQsFADBOMQswCQYDVQQGEwJV
+      6yWIMDY6InMD3EAG
+      -----END CERTIFICATE-----
+      EOF
+    #@overlay/append
+    - openssl x509 -in /etc/ssl/certs/myca.pem -text  -fingerprint >>/etc/pki/tls/certs/ca-bundle.crt
+    #! Add HTTP_PROXY
+    #@overlay/append
+    - echo '[Service]' > /etc/systemd/system/containerd.service.d/http-proxy.conf
+    #@overlay/append
+    - echo 'Environment="HTTPS_PROXY=http://10.65.12.215:3128"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+    #@overlay/append
+    - echo 'Environment="NO_PROXY=10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+    #@overlay/append
+    - echo 'Environment="https_proxy=http://10.65.12.215:3128"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+    #@overlay/append
+    - echo 'Environment="no_proxy=10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+    #@overlay/append
+    - echo 'PROXY_ENABLED="yes"' > /etc/sysconfig/proxy
+    #@overlay/append
+    - echo 'HTTPS_PROXY="http://10.65.12.215:3128"' >> /etc/sysconfig/proxy
+    #@overlay/append
+    - echo 'NO_PROXY="10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/sysconfig/proxy
+    #@overlay/append
+    - echo 'https_proxy="http://10.65.12.215:3128"' >> /etc/sysconfig/proxy
+    #@overlay/append
+    - echo 'no_proxy="10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/sysconfig/proxy
+    #@overlay/append
+    - systemctl daemon-reload
+    #@overlay/append
+    - systemctl restart containerd
+    #! Adding modules for IPSec
+    #@overlay/append
+    - sudo tdnf -y install strongswan
+    #@overlay/append
+    - sudo modprobe ah4
+    #@overlay/append
+    - sudo modprobe ah6
+    #@overlay/append
+    - sudo modprobe esp4
+    #@overlay/append
+    - sudo modprobe esp6
+    #@overlay/append
+    - sudo modprobe xfrm4_tunnel
+    #@overlay/append
+    - sudo modprobe xfrm6_tunnel
+    #@overlay/append
+    - sudo modprobe xfrm_user
+    #@overlay/append
+    - sudo modprobe ip_tunnel
+    #@overlay/append
+    - sudo modprobe tunnel6
+    #@overlay/append
+    - sudo modprobe xfrm4_mode_tunnel
+    #@overlay/append
+    - sudo modprobe xfrm6_mode_tunnel
+
+
+#! Adding your custom CA certificate to the trusted chain and PROXY config on all worker nodes.
+#@overlay/match by=overlay.subset({"kind":"KubeadmConfigTemplate"})
+---
+spec:
+  template:
+    spec:
+      preKubeadmCommands:
+      #! Adding your custom CA
+      #@overlay/append
+      - |
+        cat <<EOF > /etc/ssl/certs/myca.pem
+        -----BEGIN CERTIFICATE-----
+        MIIFGDCCAwACCQCN5wYlscWbuTANBgkqhkiG9w0BAQsFADBOMQswCQYDVQQGEwJV
+        6yWIMDY6InMD3EAG
+        -----END CERTIFICATE-----
+        EOF
+      #@overlay/append
+      - openssl x509 -in /etc/ssl/certs/myca.pem -text  -fingerprint >>/etc/pki/tls/certs/ca-bundle.crt
+      #! Add HTTP_PROXY
+      #@overlay/append
+      - echo '[Service]' > /etc/systemd/system/containerd.service.d/http-proxy.conf
+      #@overlay/append
+      - echo 'Environment="HTTPS_PROXY=http://10.65.12.215:3128"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+      #@overlay/append
+      - echo 'Environment="NO_PROXY=10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+      #@overlay/append
+      - echo 'Environment="https_proxy=http://10.65.12.215:3128"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+      #@overlay/append
+      - echo 'Environment="no_proxy=10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/systemd/system/containerd.service.d/http-proxy.conf
+      #@overlay/append
+      - echo 'PROXY_ENABLED="yes"' > /etc/sysconfig/proxy
+      #@overlay/append
+      - echo 'HTTPS_PROXY="http://10.65.12.215:3128"' >> /etc/sysconfig/proxy
+      #@overlay/append
+      - echo 'NO_PROXY="10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/sysconfig/proxy
+      #@overlay/append
+      - echo 'https_proxy="http://10.65.12.215:3128"' >> /etc/sysconfig/proxy
+      #@overlay/append
+      - echo 'no_proxy="10.65.33.0/24,10.65.129.0/24,10.65.130.0/24,10.65.131.0/24,10.65.132.0/24,10.65.133.0/24,10.65.134.0/24,10.65.135.0/24,10.65.136.0/24,10.65.137.0/24,10.65.138.0/24,localhost,127.0.0.1,kubernetes.default.svc,.svc,10.0.0.0/8,10.96.0.0/12,100.96.0.0/11"' >> /etc/sysconfig/proxy
+      #@overlay/append
+      - systemctl daemon-reload
+      #@overlay/append
+      - systemctl restart containerd
+      #! Adding modules for IPSec
+      #@overlay/append
+      - sudo tdnf -y install strongswan
+      #@overlay/append
+      - sudo modprobe ah4
+      #@overlay/append
+      - sudo modprobe ah6
+      #@overlay/append
+      - sudo modprobe esp4
+      #@overlay/append
+      - sudo modprobe esp6
+      #@overlay/append
+      - sudo modprobe xfrm4_tunnel
+      #@overlay/append
+      - sudo modprobe xfrm6_tunnel
+      #@overlay/append
+      - sudo modprobe xfrm_user
+      #@overlay/append
+      - sudo modprobe ip_tunnel
+      #@overlay/append
+      - sudo modprobe tunnel6
+      #@overlay/append
+      - sudo modprobe xfrm4_mode_tunnel
+      #@overlay/append
+      - sudo modprobe xfrm6_mode_tunnel
+
