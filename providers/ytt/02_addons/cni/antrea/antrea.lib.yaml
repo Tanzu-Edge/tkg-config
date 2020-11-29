@@ -805,7 +805,7 @@ data:
     #   tls.key: <TLS private key>
     # And the Secret must be mounted to directory "/var/run/antrea/antrea-controller-tls" of the
     # antrea-controller container.
-    #selfSignedCert: true
+    selfSignedCert: true
 kind: ConfigMap
 metadata:
   annotations: {}
