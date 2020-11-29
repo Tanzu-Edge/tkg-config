@@ -53,5 +53,6 @@ spec:
 #! CIDR Range for services in cluster. It's required to support egress network policy, should
 #! be set to the same value as the one specified by --service-cluster-ip-range for kube-apiserver.
 serviceCIDR: #@ data.values.SERVICE_CIDR
-
+tunnelType: gre
+enableIPSecTunnel: true
 #@ end
